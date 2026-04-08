@@ -1,0 +1,32 @@
+name: BoundAllay
+version: ${project.version}
+main: dev.nafis.boundallay.BoundAllayPlugin
+api-version: '1.21'
+author: Nafis
+description: Cross-play allay companion system with multi-allay support. GUI-based, Java + Bedrock compatible.
+softdepend: [floodgate]
+commands:
+  allay:
+    description: Manage your bound allays
+    usage: /allay [bind|summon|store|release|rename|list|summonall|storeall|admin|help] [name]
+    permission: boundallay.use
+    aliases: [ally, pet]
+permissions:
+  boundallay.use:
+    description: Allows opening the vault and basic allay interaction
+    default: true
+  boundallay.bind:
+    description: Allows binding wild allays
+    default: true
+  boundallay.summon:
+    description: Allows summoning stored allays
+    default: true
+  boundallay.release:
+    description: Allows releasing (permanently unbinding) an allay
+    default: true
+  boundallay.rename:
+    description: Allows renaming bound allays
+    default: true
+  boundallay.admin:
+    description: Admin commands (reload, view other players)
+    default: op

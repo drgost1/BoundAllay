@@ -1,0 +1,36 @@
+# ============================================
+#  BoundAllay v3 configuration
+# ============================================
+
+allay:
+  max-per-player: 20
+  summon-all-on-join: false
+
+follow:
+  distance: 64.0
+  tick-interval: 10
+
+bind:
+  radius: 20.0
+
+death:
+  respawn-delay-ticks: 1200
+  invincible: false
+  block-pvp-damage: true
+
+cooldown:
+  action-ms: 2000
+
+bedrock:
+  prefer-native-forms: true
+
+combat:
+  fighter-damage: 4.0
+  fighter-range: 64
+  healer-interval-ticks: 600
+  healer-potion-duration: 200
+  guardian-range: 20
+  collector-range: 16
+
+worlds:
+  disabled: []
