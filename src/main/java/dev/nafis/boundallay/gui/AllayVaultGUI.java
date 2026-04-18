@@ -1,8 +1,8 @@
 package dev.nafis.boundallay.gui;
 
 import dev.nafis.boundallay.AllayData;
-import dev.nafis.boundallay.AllayType;
 import dev.nafis.boundallay.AllayManager;
+import dev.nafis.boundallay.AllayType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -17,43 +17,25 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Two-screen chest GUI for the bound allay vault.
- *
- * Screen 1 (List): Shows all bound allays as clickable items. Click one to manage it.
- * Screen 2 (Manage): Shows actions for a single allay (summon, store, release, back).
- *
- * No Unicode symbols, short lore, basic materials - Bedrock compatible via Geyser.
- */
 public final class AllayVaultGUI {
 
-    // List screen constants
-    public static final int LIST_SIZE = 54; // 6 rows
-    public static final int LIST_BIND_SLOT = 49;   // bottom row: bind new
-    public static final int LIST_SUMMONALL_SLOT = 50;
-    public static final int LIST_STOREALL_SLOT = 51;
-    public static final int LIST_CLOSE_SLOT = 53;  // bottom row: close
+    public static final int LIST_SIZE = 54;
+    public static final int LIST_BIND_SLOT = 49;
+    public static final int LIST_CLOSE_SLOT = 53;
 
-    // Manage screen constants
-    public static final int MANAGE_SIZE = 27; // 3 rows
+    public static final int MANAGE_SIZE = 27;
     public static final int MANAGE_INFO_SLOT = 4;
     public static final int MANAGE_SUMMON_SLOT = 11;
     public static final int MANAGE_STORE_SLOT = 13;
     public static final int MANAGE_RELEASE_SLOT = 15;
-    public static final int MANAGE_BACK_SLOT = 18;
-    public static final int MANAGE_RENAME_SLOT = 20;
-    public static final int MANAGE_CLOSE_SLOT = 26;
     public static final int MANAGE_TYPE_SLOT = 22;
-    public static final int MANAGE_GUARD_SLOT = 24;
-    public static final int MANAGE_PVP_SLOT = 8;
+    public static final int MANAGE_BACK_SLOT = 18;
+    public static final int MANAGE_CLOSE_SLOT = 26;
 
     private AllayVaultGUI() {}
 
     // ==================== LIST SCREEN ====================
 
-    /**
-     * Open the list screen showing all allays for the player.
-     */
     public static void openList(Player player, AllayManager mgr) {
         AllayVaultHolder holder = new AllayVaultHolder();
         holder.setListScreen(true);
@@ -64,11 +46,9 @@ public final class AllayVaultGUI {
         );
         holder.setInventory(inv);
 
-        // Fill border
         ItemStack glass = filler();
         for (int i = 0; i < LIST_SIZE; i++) inv.setItem(i, glass);
 
-        // Populate allays in slots 10-43 (inner area of rows 1-4, skipping borders)
         Map<String, AllayData> allays = mgr.getStorage().getAll(player.getUniqueId());
         int maxAllays = mgr.getMaxAllays();
 
@@ -86,35 +66,14 @@ public final class AllayVaultGUI {
             slotIndex++;
         }
 
-        // Bind button - only if under max
         boolean canBind = allays.size() < maxAllays;
         inv.setItem(LIST_BIND_SLOT, bindButton(canBind, allays.size(), maxAllays));
-
-        // Info in top middle
         inv.setItem(4, headerItem(allays.size(), maxAllays));
-
-        // Close button
-        // Summon All button
-        inv.setItem(LIST_SUMMONALL_SLOT, labeled(
-                Material.EMERALD_BLOCK,
-                "Summon All",
-                NamedTextColor.GREEN,
-                List.of("Summon all stored allays.")
-        ));
-
-        // Store All button
-        inv.setItem(LIST_STOREALL_SLOT, labeled(
-                Material.ENDER_CHEST,
-                "Store All",
-                NamedTextColor.GOLD,
-                List.of("Store all active allays.")
-        ));
         inv.setItem(LIST_CLOSE_SLOT, closeButton());
 
         player.openInventory(inv);
     }
 
-    /** Get the inner content slot indices for a 54-slot inventory (rows 1-4, columns 1-7). */
     private static int[] getContentSlots() {
         List<Integer> slots = new ArrayList<>();
         for (int row = 1; row <= 4; row++) {
@@ -126,18 +85,18 @@ public final class AllayVaultGUI {
     }
 
     private static ItemStack allayListItem(AllayData data) {
-        Material mat = data.active ? Material.DIAMOND : Material.ALLAY_SPAWN_EGG;
+        AllayType type = data.getType();
+        Material mat = data.active ? type.icon() : Material.ALLAY_SPAWN_EGG;
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
 
-        NamedTextColor nameColor = data.active ? NamedTextColor.GREEN : NamedTextColor.AQUA;
+        NamedTextColor nameColor = data.active ? AllayManager.typeColor(type) : NamedTextColor.AQUA;
         meta.displayName(Component.text(data.displayName())
                 .color(nameColor)
                 .decoration(TextDecoration.ITALIC, false));
 
         List<Component> lore = new ArrayList<>();
-        AllayType listType = AllayType.fromString(data.type);
-        lore.add(line("Type: " + listType.getDisplayName(), NamedTextColor.LIGHT_PURPLE));
+        lore.add(line("Type: " + type.displayName(), AllayManager.typeColor(type)));
         lore.add(line("Status: " + (data.active ? "Summoned" : "Stored"),
                 data.active ? NamedTextColor.GREEN : NamedTextColor.GRAY));
         lore.add(line("Bonded item: " + (data.heldItemB64 != null ? "Yes" : "No"), NamedTextColor.GRAY));
@@ -174,9 +133,6 @@ public final class AllayVaultGUI {
 
     // ==================== MANAGE SCREEN ====================
 
-    /**
-     * Open the manage screen for a specific allay.
-     */
     public static void openManage(Player player, AllayManager mgr, String allayId) {
         AllayData data = mgr.getStorage().get(player.getUniqueId(), allayId);
         if (data == null) {
@@ -194,14 +150,11 @@ public final class AllayVaultGUI {
         );
         holder.setInventory(inv);
 
-        // Fill with glass
         ItemStack glass = filler();
         for (int i = 0; i < MANAGE_SIZE; i++) inv.setItem(i, glass);
 
-        // Info display
         inv.setItem(MANAGE_INFO_SLOT, infoItem(data));
 
-        // Summon button
         boolean canSummon = !data.active;
         inv.setItem(MANAGE_SUMMON_SLOT, labeled(
                 canSummon ? Material.EMERALD : Material.GRAY_DYE,
@@ -212,7 +165,6 @@ public final class AllayVaultGUI {
                         : List.of("This allay is already in the world.")
         ));
 
-        // Store button
         boolean canStore = data.active;
         inv.setItem(MANAGE_STORE_SLOT, labeled(
                 canStore ? Material.ENDER_CHEST : Material.GRAY_DYE,
@@ -223,7 +175,6 @@ public final class AllayVaultGUI {
                         : List.of("This allay is not currently in the world.")
         ));
 
-        // Release button
         inv.setItem(MANAGE_RELEASE_SLOT, labeled(
                 Material.TNT,
                 "Release (Unbind)",
@@ -231,44 +182,15 @@ public final class AllayVaultGUI {
                 List.of("Permanently unbind this allay.", "This cannot be undone!")
         ));
 
-        // Rename button
-        inv.setItem(MANAGE_RENAME_SLOT, labeled(
-                Material.NAME_TAG,
-                "Rename",
-                NamedTextColor.YELLOW,
-                List.of("Click to rename this allay.", "Use: /allay rename old new")
-        ));
-
-        // Type button
-        AllayType allayType = AllayType.fromString(data.type);
+        AllayType current = data.getType();
+        AllayType next = current.next();
         inv.setItem(MANAGE_TYPE_SLOT, labeled(
-                Material.DIAMOND_SWORD,
-                "Type: " + allayType.getDisplayName(),
-                NamedTextColor.LIGHT_PURPLE,
-                List.of(allayType.getDescription(), "", "Click to cycle type")
+                current.icon(),
+                "Type: " + current.displayName(),
+                AllayManager.typeColor(current),
+                List.of(current.description(), "", "Click to switch to " + next.displayName())
         ));
 
-        // Guard button
-        boolean isGuardian = allayType == AllayType.GUARDIAN;
-        inv.setItem(MANAGE_GUARD_SLOT, labeled(
-                Material.SHIELD,
-                isGuardian ? ("Guard: " + (data.guardMode ? "ON" : "OFF")) : "Guard (Guardian only)",
-                isGuardian ? (data.guardMode ? NamedTextColor.GREEN : NamedTextColor.GOLD) : NamedTextColor.DARK_GRAY,
-                isGuardian
-                        ? List.of(data.guardMode ? "Guarding a location" : "Not guarding", "", "Click to toggle guard mode")
-                        : List.of("Set type to Guardian first")
-        ));
-
-
-        // PvP button
-        inv.setItem(MANAGE_PVP_SLOT, labeled(
-                Material.IRON_SWORD,
-                "PvP: " + (data.pvpMode ? "ON" : "OFF"),
-                data.pvpMode ? NamedTextColor.GREEN : NamedTextColor.RED,
-                List.of(data.pvpMode ? "Allay attacks players who hit you" : "Allay ignores player attackers", "", "Click to toggle")
-        ));
-
-        // Back button
         inv.setItem(MANAGE_BACK_SLOT, labeled(
                 Material.ARROW,
                 "Back to List",
@@ -276,22 +198,20 @@ public final class AllayVaultGUI {
                 List.of()
         ));
 
-        // Close button
         inv.setItem(MANAGE_CLOSE_SLOT, closeButton());
 
         player.openInventory(inv);
     }
 
     private static ItemStack infoItem(AllayData data) {
+        AllayType type = data.getType();
         ItemStack item = new ItemStack(Material.ALLAY_SPAWN_EGG);
         ItemMeta meta = item.getItemMeta();
         meta.displayName(Component.text(data.displayName())
-                .color(NamedTextColor.AQUA)
+                .color(AllayManager.typeColor(type))
                 .decoration(TextDecoration.ITALIC, false));
         List<Component> lore = new ArrayList<>();
-        AllayType infoType = AllayType.fromString(data.type);
-        lore.add(line("ID: " + data.id, NamedTextColor.DARK_GRAY));
-        lore.add(line("Type: " + infoType.getDisplayName(), NamedTextColor.LIGHT_PURPLE));
+        lore.add(line("Type: " + type.displayName(), AllayManager.typeColor(type)));
         lore.add(line("Status: " + (data.active ? "Summoned" : "Stored"),
                 data.active ? NamedTextColor.GREEN : NamedTextColor.GRAY));
         lore.add(line("Bonded item: " + (data.heldItemB64 != null ? "Yes" : "No"), NamedTextColor.GRAY));
@@ -314,15 +234,17 @@ public final class AllayVaultGUI {
         return labeled(Material.BARRIER, "Close", NamedTextColor.RED, List.of());
     }
 
-    static ItemStack labeled(Material mat, String name, NamedTextColor color,
-                                     List<String> loreLines) {
+    static ItemStack labeled(Material mat, String name, NamedTextColor color, List<String> loreLines) {
         ItemStack i = new ItemStack(mat);
         ItemMeta m = i.getItemMeta();
         m.displayName(Component.text(name).color(color)
                 .decoration(TextDecoration.ITALIC, false));
         if (!loreLines.isEmpty()) {
             List<Component> lore = new ArrayList<>();
-            for (String l : loreLines) lore.add(line(l, NamedTextColor.GRAY));
+            for (String l : loreLines) {
+                if (l.isEmpty()) lore.add(Component.empty());
+                else lore.add(line(l, NamedTextColor.GRAY));
+            }
             m.lore(lore);
         }
         i.setItemMeta(m);

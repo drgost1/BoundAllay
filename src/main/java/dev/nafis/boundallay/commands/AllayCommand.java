@@ -1,13 +1,11 @@
 package dev.nafis.boundallay.commands;
 
-import dev.nafis.boundallay.AllayData;
 import dev.nafis.boundallay.AllayManager;
-import dev.nafis.boundallay.AllayType;
 import dev.nafis.boundallay.AllayStorage;
+import dev.nafis.boundallay.AllayType;
 import dev.nafis.boundallay.BoundAllayPlugin;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -17,12 +15,11 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class AllayCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> USER_SUBS =
-            List.of("bind", "summon", "store", "release", "rename", "list", "summonall", "storeall", "info", "type", "guard", "pvp", "help");
+            List.of("bind", "summon", "store", "release", "rename", "type", "list", "summonall", "storeall", "info", "help");
     private static final List<String> ADMIN_SUBS = List.of("admin");
 
     private final BoundAllayPlugin plugin;
@@ -37,7 +34,6 @@ public class AllayCommand implements CommandExecutor, TabCompleter {
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
                              @NotNull String label, @NotNull String[] args) {
 
-        // Admin subcommand - works from console
         if (args.length > 0 && args[0].equalsIgnoreCase("admin")) {
             return handleAdmin(sender, args);
         }
@@ -47,7 +43,6 @@ public class AllayCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // No args -> open vault
         if (args.length == 0) {
             mgr.openVault(p);
             return true;
@@ -55,98 +50,54 @@ public class AllayCommand implements CommandExecutor, TabCompleter {
 
         switch (args[0].toLowerCase()) {
             case "bind" -> {
-                if (!p.hasPermission("boundallay.bind")) {
-                    noPermission(p);
-                    return true;
-                }
-                if (args.length < 2) {
-                    mgr.bind(p); // auto-name
-                } else {
-                    mgr.bind(p, joinArgs(args, 1));
-                }
+                if (!p.hasPermission("boundallay.bind")) { noPermission(p); return true; }
+                if (args.length < 2) mgr.bind(p);
+                else mgr.bind(p, joinArgs(args, 1));
             }
             case "summon" -> {
-                if (!p.hasPermission("boundallay.summon")) {
-                    noPermission(p);
-                    return true;
-                }
-                if (args.length < 2) {
-                    mgr.summon(p); // summon first available
-                } else {
-                    mgr.summon(p, joinArgs(args, 1));
-                }
+                if (!p.hasPermission("boundallay.summon")) { noPermission(p); return true; }
+                if (args.length < 2) mgr.summon(p);
+                else mgr.summon(p, joinArgs(args, 1));
             }
             case "store" -> {
-                if (args.length < 2) {
-                    mgr.store(p); // store first active
-                } else {
-                    mgr.store(p, joinArgs(args, 1));
-                }
+                if (args.length < 2) mgr.store(p);
+                else mgr.store(p, joinArgs(args, 1));
             }
             case "release" -> {
-                if (!p.hasPermission("boundallay.release")) {
-                    noPermission(p);
-                    return true;
-                }
-                if (args.length < 2) {
-                    send(p, "Usage: /allay release <name>", NamedTextColor.RED);
-                } else {
-                    mgr.release(p, joinArgs(args, 1));
-                }
+                if (!p.hasPermission("boundallay.release")) { noPermission(p); return true; }
+                if (args.length < 2) send(p, "Usage: /allay release <name>", NamedTextColor.RED);
+                else mgr.release(p, joinArgs(args, 1));
             }
             case "rename" -> {
-                if (!p.hasPermission("boundallay.rename")) {
-                    noPermission(p);
-                    return true;
-                }
+                if (!p.hasPermission("boundallay.rename")) { noPermission(p); return true; }
+                if (args.length < 3) send(p, "Usage: /allay rename <old-name> <new-name>", NamedTextColor.RED);
+                else mgr.rename(p, args[1], joinArgs(args, 2));
+            }
+            case "type" -> {
+                if (!p.hasPermission("boundallay.type")) { noPermission(p); return true; }
                 if (args.length < 3) {
-                    send(p, "Usage: /allay rename <old-name> <new-name>", NamedTextColor.RED);
+                    send(p, "Usage: /allay type <name> <FIGHTER|HEALER|GUARDIAN>", NamedTextColor.RED);
                 } else {
-                    mgr.rename(p, args[1], joinArgs(args, 2));
+                    AllayType type;
+                    try {
+                        type = AllayType.valueOf(args[2].toUpperCase());
+                    } catch (IllegalArgumentException e) {
+                        send(p, "Unknown type. Use FIGHTER, HEALER, or GUARDIAN.", NamedTextColor.RED);
+                        return true;
+                    }
+                    mgr.setType(p, args[1], type);
                 }
             }
             case "list" -> mgr.showInfo(p);
             case "info" -> {
-                if (args.length < 2) {
-                    mgr.showInfo(p);
-                } else {
-                    mgr.showInfo(p, joinArgs(args, 1));
-                }
+                if (args.length < 2) mgr.showInfo(p);
+                else mgr.showInfo(p, joinArgs(args, 1));
             }
             case "summonall" -> {
-                if (!p.hasPermission("boundallay.summon")) {
-                    noPermission(p);
-                    return true;
-                }
+                if (!p.hasPermission("boundallay.summon")) { noPermission(p); return true; }
                 mgr.summonAll(p);
             }
             case "storeall" -> mgr.storeAll(p);
-            case "type" -> {
-                if (args.length < 2) {
-                    send(p, "Usage: /allay type <name> [type]", NamedTextColor.RED);
-                    send(p, "Types: FIGHTER, HEALER, GUARDIAN, COLLECTOR", NamedTextColor.GRAY);
-                    send(p, "Omit type to cycle to the next one.", NamedTextColor.GRAY);
-                } else if (args.length < 3) {
-                    mgr.cycleType(p, args[1]);
-                } else {
-                    AllayType type = AllayType.fromString(args[2]);
-                    mgr.setType(p, args[1], type);
-                }
-            }
-            case "guard" -> {
-                if (args.length < 2) {
-                    send(p, "Usage: /allay guard <name>", NamedTextColor.RED);
-                } else {
-                    mgr.toggleGuard(p, joinArgs(args, 1));
-                }
-            }
-            case "pvp" -> {
-                if (args.length < 2) {
-                    send(p, "Usage: /allay pvp <name>", NamedTextColor.RED);
-                } else {
-                    mgr.togglePvp(p, joinArgs(args, 1));
-                }
-            }
             case "help" -> help(p);
             case "vault", "menu", "open" -> mgr.openVault(p);
             default -> help(p);
@@ -162,7 +113,7 @@ public class AllayCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length < 2) {
-            sender.sendMessage(Component.text("Admin commands: reload, stats, prune <days>").color(NamedTextColor.AQUA));
+            sender.sendMessage(Component.text("Admin: reload, stats, prune <days>, rescan").color(NamedTextColor.AQUA));
             return true;
         }
 
@@ -170,7 +121,7 @@ public class AllayCommand implements CommandExecutor, TabCompleter {
             case "reload" -> {
                 plugin.reloadBoundConfig();
                 sender.sendMessage(Component.text("BoundAllay config reloaded.").color(NamedTextColor.GREEN));
-                sender.sendMessage(Component.text("Note: follow-tick-interval only takes effect after a full restart.")
+                sender.sendMessage(Component.text("Note: tick intervals only change after a full restart.")
                         .color(NamedTextColor.GRAY));
             }
             case "stats" -> {
@@ -194,7 +145,11 @@ public class AllayCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(Component.text("Invalid number.").color(NamedTextColor.RED));
                 }
             }
-            default -> sender.sendMessage(Component.text("Unknown admin command. Use: reload, stats, prune").color(NamedTextColor.RED));
+            case "rescan" -> {
+                mgr.scanAndRestoreActive();
+                sender.sendMessage(Component.text("Entity scan complete. Check server log.").color(NamedTextColor.GREEN));
+            }
+            default -> sender.sendMessage(Component.text("Unknown. Use: reload, stats, prune, rescan").color(NamedTextColor.RED));
         }
         return true;
     }
@@ -216,9 +171,8 @@ public class AllayCommand implements CommandExecutor, TabCompleter {
             String sub = args[0].toLowerCase();
             String prefix = args[1].toLowerCase();
 
-            // Commands that take an allay name
             if (sub.equals("summon") || sub.equals("store") || sub.equals("release")
-                    || sub.equals("rename") || sub.equals("info") || sub.equals("pvp")) {
+                    || sub.equals("rename") || sub.equals("info") || sub.equals("type")) {
                 List<String> names = mgr.listAllayIds(p.getUniqueId());
                 List<String> out = new ArrayList<>();
                 for (String name : names) {
@@ -228,50 +182,38 @@ public class AllayCommand implements CommandExecutor, TabCompleter {
             }
 
             if (sub.equals("admin")) {
-                List<String> adminSubs = List.of("reload", "stats", "prune");
+                List<String> adminSubs = List.of("reload", "stats", "prune", "rescan");
                 List<String> out = new ArrayList<>();
                 for (String s : adminSubs) if (s.startsWith(prefix)) out.add(s);
                 return out;
             }
         }
 
-        // Tab complete type names for /allay type <name> <type>
-        if (args.length == 3 && sender instanceof Player) {
-            String sub = args[0].toLowerCase();
-            if (sub.equals("type")) {
-                String prefix = args[2].toLowerCase();
-                List<String> out = new ArrayList<>();
-                for (AllayType t : AllayType.values()) {
-                    if (t.name().toLowerCase().startsWith(prefix)) out.add(t.name());
-                }
-                return out;
+        if (args.length == 3 && args[0].equalsIgnoreCase("type")) {
+            String prefix = args[2].toLowerCase();
+            List<String> out = new ArrayList<>();
+            for (AllayType t : AllayType.values()) {
+                if (t.name().toLowerCase().startsWith(prefix)) out.add(t.name());
             }
+            return out;
         }
-
-        // rename: second arg is the new name, no completion needed
-        // admin prune: third arg is a number
 
         return List.of();
     }
 
     private void help(Player p) {
-        send(p, "--- BoundAllay v3 ---", NamedTextColor.AQUA);
-        send(p, "/allay              - open vault menu", NamedTextColor.GRAY);
-        send(p, "/allay bind <name>  - bind the nearest wild allay", NamedTextColor.GRAY);
-        send(p, "/allay summon [name]- spawn your allay", NamedTextColor.GRAY);
-        send(p, "/allay store [name] - store a summoned allay", NamedTextColor.GRAY);
+        send(p, "--- BoundAllay v4 ---", NamedTextColor.AQUA);
+        send(p, "/allay                - open vault menu", NamedTextColor.GRAY);
+        send(p, "/allay bind <name>    - bind the nearest wild allay", NamedTextColor.GRAY);
+        send(p, "/allay summon [name]  - spawn your allay", NamedTextColor.GRAY);
+        send(p, "/allay store [name]   - store a summoned allay", NamedTextColor.GRAY);
+        send(p, "/allay type <name> <FIGHTER|HEALER|GUARDIAN>", NamedTextColor.GRAY);
         send(p, "/allay release <name> - permanently unbind", NamedTextColor.GRAY);
-        send(p, "/allay rename <old> <new> - rename an allay", NamedTextColor.GRAY);
-        send(p, "/allay list         - list all your allays", NamedTextColor.GRAY);
-        send(p, "/allay summonall    - summon all stored allays", NamedTextColor.GRAY);
-        send(p, "/allay storeall     - store all summoned allays", NamedTextColor.GRAY);
-        send(p, "/allay type <name> [type] - set/cycle allay type", NamedTextColor.GRAY);
-        send(p, "/allay guard <name> - toggle guard mode (Guardian type)", NamedTextColor.GRAY);
-        send(p, "/allay pvp <name>   - toggle PvP attack mode", NamedTextColor.GRAY);
+        send(p, "/allay rename <old> <new>", NamedTextColor.GRAY);
+        send(p, "/allay list           - list all your allays", NamedTextColor.GRAY);
+        send(p, "/allay summonall / storeall", NamedTextColor.GRAY);
         if (p.hasPermission("boundallay.admin")) {
-            send(p, "/allay admin reload - reload config", NamedTextColor.DARK_AQUA);
-            send(p, "/allay admin stats  - storage stats", NamedTextColor.DARK_AQUA);
-            send(p, "/allay admin prune <days> - prune old data", NamedTextColor.DARK_AQUA);
+            send(p, "/allay admin reload|stats|prune|rescan", NamedTextColor.DARK_AQUA);
         }
     }
 

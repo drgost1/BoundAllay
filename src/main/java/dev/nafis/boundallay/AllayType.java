@@ -1,38 +1,34 @@
 package dev.nafis.boundallay;
 
-/**
- * Types of bound allays, each with unique combat/utility behavior.
- */
+import org.bukkit.Material;
+
 public enum AllayType {
-    FIGHTER("Fighter", "Attacks hostile mobs near owner"),
-    HEALER("Healer", "Gives regeneration to owner"),
-    GUARDIAN("Guardian", "Guards a location, attacks hostiles"),
-    COLLECTOR("Collector", "Auto-picks up nearby drops for owner");
+    FIGHTER("Fighter", "Attacks hostile mobs near the owner.", Material.IRON_SWORD),
+    HEALER("Healer", "Periodically restores the owner's health.", Material.GOLDEN_APPLE),
+    GUARDIAN("Guardian", "Defends the owner from any attacker (mobs + players).", Material.SHIELD);
 
     private final String displayName;
     private final String description;
+    private final Material icon;
 
-    AllayType(String displayName, String description) {
+    AllayType(String displayName, String description, Material icon) {
         this.displayName = displayName;
         this.description = description;
+        this.icon = icon;
     }
 
-    public String getDisplayName() { return displayName; }
-    public String getDescription() { return description; }
+    public String displayName() { return displayName; }
+    public String description() { return description; }
+    public Material icon() { return icon; }
 
-    /** Get the next type in the cycle. */
     public AllayType next() {
-        AllayType[] values = values();
-        return values[(ordinal() + 1) % values.length];
+        AllayType[] v = values();
+        return v[(this.ordinal() + 1) % v.length];
     }
 
-    /** Safe parse from string, defaults to FIGHTER. */
-    public static AllayType fromString(String s) {
-        if (s == null) return FIGHTER;
-        try {
-            return valueOf(s.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            return FIGHTER;
-        }
+    public static AllayType parse(String s, AllayType fallback) {
+        if (s == null) return fallback;
+        try { return valueOf(s.trim().toUpperCase()); }
+        catch (IllegalArgumentException e) { return fallback; }
     }
 }

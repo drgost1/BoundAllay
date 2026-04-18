@@ -11,6 +11,7 @@ import java.util.Objects;
 public final class BoundAllayPlugin extends JavaPlugin {
 
     private AllayManager manager;
+    private AllayBehaviors behaviors;
     private BoundAllayConfig boundConfig;
     private AllayStorage storage;
 
@@ -18,11 +19,9 @@ public final class BoundAllayPlugin extends JavaPlugin {
     public void onEnable() {
         AllayKeys.init(this);
 
-        // Load config
         this.boundConfig = new BoundAllayConfig();
         this.boundConfig.load(this);
 
-        // Storage with plugin reference for async saves
         this.storage = new AllayStorage(
                 getDataFolder().toPath().resolve("allays.json"),
                 getLogger(),
@@ -31,37 +30,30 @@ public final class BoundAllayPlugin extends JavaPlugin {
         storage.load();
 
         this.manager = new AllayManager(this, storage, boundConfig);
+        this.behaviors = new AllayBehaviors(manager, boundConfig);
 
-        // Listeners
-        getServer().getPluginManager().registerEvents(new AllayListener(this, manager), this);
+        // Deferred scan so all worlds are loaded
+        getServer().getScheduler().runTaskLater(this, manager::scanAndRestoreActive, 40L);
+
+        getServer().getPluginManager().registerEvents(new AllayListener(this, manager, behaviors), this);
         getServer().getPluginManager().registerEvents(new VaultListener(manager), this);
 
-        // Command
         AllayCommand cmd = new AllayCommand(this, manager);
         PluginCommand pc = Objects.requireNonNull(getCommand("allay"));
         pc.setExecutor(cmd);
         pc.setTabCompleter(cmd);
 
-        // Follow tick
-        getServer().getScheduler().runTaskTimer(this, manager::tickFollow,
+        getServer().getScheduler().runTaskTimer(this, behaviors::tickFollow,
                 20L, boundConfig.followTickInterval);
-
-        // Combat tick (every 10 ticks = 0.5s, starting at 40 ticks)
-        getServer().getScheduler().runTaskTimer(this, manager::tickCombat, 40L, 10L);
+        getServer().getScheduler().runTaskTimer(this, behaviors::tickCombat,
+                25L, boundConfig.combatTickInterval);
 
         boolean floodgate = getServer().getPluginManager().getPlugin("floodgate") != null;
-        getLogger().info("Floodgate detected: " + floodgate
-                + (floodgate ? " (Bedrock players will see native forms)"
-                             : " (Bedrock players will see chest GUI via Geyser)"));
-
+        getLogger().info("Floodgate: " + (floodgate ? "detected" : "absent"));
         getLogger().info("BoundAllay v" + getDescription().getVersion()
                 + " enabled. Loaded " + storage.size() + " allays across " + storage.playerCount() + " players.");
     }
 
-    /**
-     * Reload config.yml at runtime. Some values (like follow-tick-interval)
-     * only take effect after a full restart because schedulers are already running.
-     */
     public void reloadBoundConfig() {
         boundConfig.load(this);
         getLogger().info("BoundAllay config reloaded.");
@@ -73,14 +65,12 @@ public final class BoundAllayPlugin extends JavaPlugin {
             int stored = manager.storeAllActive();
             getLogger().info("Stored " + stored + " active allays on disable.");
         }
-        // Final sync save to make sure nothing is lost
         if (storage != null) {
             storage.saveSync();
             getLogger().info("BoundAllay disabled. Final save complete.");
         }
     }
 
-    public AllayManager getManager() {
-        return manager;
-    }
+    public AllayManager getManager() { return manager; }
+    public AllayBehaviors getBehaviors() { return behaviors; }
 }

@@ -1,36 +1,108 @@
 # ============================================
-#  BoundAllay v3 configuration
+#  BoundAllay v4 configuration
 # ============================================
+# Changes take effect after /allay admin reload (admins only)
+# or after a server restart. Tick intervals require a restart.
 
+# ---------- Allay limits ----------
 allay:
-  max-per-player: 20
+  # Maximum number of allays a single player can bind.
+  # Min: 1, Max: 20
+  max-per-player: 3
+
+  # Default type for newly bound allays.
+  # Options: FIGHTER, HEALER, GUARDIAN
+  default-type: FIGHTER
+
+  # If true, all stored allays are auto-summoned on player join.
   summon-all-on-join: false
 
+# ---------- Follow behavior ----------
 follow:
-  distance: 64.0
-  tick-interval: 10
+  # Soft follow distance (blocks). Allays orbit the owner at 2.4 blocks.
+  # This is only used for visualization/orbit; they use pathfinder to follow.
+  # Min: 4.0, Max: 64.0
+  distance: 16.0
 
+  # Hard teleport distance. If allay is further than this from owner,
+  # it gets instantly teleported. Prevents lost allays.
+  # Min: 16.0, Max: 128.0
+  teleport-distance: 32.0
+
+  # How often the follow-tick runs (server ticks, 20 = 1s).
+  # Lower = tighter orbit, higher CPU cost.
+  # Min: 2, Max: 100
+  tick-interval: 5
+
+# ---------- Bind ----------
 bind:
-  radius: 20.0
+  # Max distance (blocks) for /allay bind to find a wild allay.
+  # Min: 1.0, Max: 16.0
+  radius: 5.0
 
+# ---------- Combat ----------
+combat:
+  # How often the combat-tick runs (server ticks).
+  # Min: 2, Max: 40. Lower = more responsive combat, higher CPU.
+  tick-interval: 5
+
+  fighter:
+    # Damage dealt per hit by FIGHTER allays.
+    # Min: 0.5, Max: 20.0
+    damage: 3.0
+
+    # Search range for mobs around the owner (blocks).
+    # Min: 4.0, Max: 32.0
+    range: 12.0
+
+    # Should FIGHTER target players too?
+    # 0 = never, 1 = only if player attacks owner (via pvp-defense), 2 = always (aggressive)
+    # Default 0 (FIGHTER focuses on mobs, GUARDIAN handles players).
+    player-priority: 0
+
+  healer:
+    # How often the HEALER heals the owner (ticks).
+    # Min: 40 (2s), Max: 6000 (5min)
+    interval-ticks: 200
+
+    # Regeneration effect duration (ticks).
+    effect-duration-ticks: 120
+
+    # Regeneration amplifier (0=I, 1=II, 2=III, 3=IV).
+    effect-amplifier: 1
+
+  guardian:
+    # GUARDIAN search range (blocks).
+    range: 16.0
+
+    # Should GUARDIAN attack hostile players (PvP defense)?
+    defend-from-players: true
+
+# ---------- Death / respawn ----------
 death:
-  respawn-delay-ticks: 1200
+  # Delay before auto-respawn after death (ticks).
+  # Min: 0, Max: 600
+  respawn-delay-ticks: 60
+
+  # If true, bound allays take NO damage at all.
   invincible: false
+
+  # If true, player damage to bound allays is cancelled.
+  # Environmental damage still applies.
   block-pvp-damage: true
 
+# ---------- Anti-spam ----------
 cooldown:
+  # Cooldown between summon/store/bind actions (ms).
+  # Min: 0, Max: 60000
   action-ms: 2000
 
+# ---------- Cross-play ----------
 bedrock:
   prefer-native-forms: true
 
-combat:
-  fighter-damage: 4.0
-  fighter-range: 64
-  healer-interval-ticks: 600
-  healer-potion-duration: 200
-  guardian-range: 20
-  collector-range: 16
-
+# ---------- World restrictions ----------
 worlds:
+  # Worlds where allays cannot be summoned.
+  # Active allays auto-store on entering these worlds.
   disabled: []
